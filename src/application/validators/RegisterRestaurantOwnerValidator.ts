@@ -13,7 +13,7 @@ export class RegisterRestaurantOwnerValidator implements IValidator<RegisterRest
         if (!name || name.trim().length < 2) {
             throw new Error('Restaurant name must be at least 2 characters long');
         }
-    }
+    } 
 
     private validateOrganizationNumber(orgNumber: string): void {
         if (!orgNumber || orgNumber.trim().length < 5) {
