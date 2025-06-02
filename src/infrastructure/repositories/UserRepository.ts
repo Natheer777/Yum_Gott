@@ -4,30 +4,30 @@ import { DatabaseConnection } from "../database/DataBaseConnection";
 
 export class UserRepository implements IUserRepository {
   constructor(private db: DatabaseConnection) { }
-  async create(user: User): Promise<User> {
-    const query = `
-      INSERT INTO users (
-        mobile_number, password, user_type, is_active,
-        name, email, restaurant_name, organization_number
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `;
-    const values = [
-      user.mobileNumber,
-      user.password,
-      user.userType,
-      user.isActive,
-      user.userType === UserType.CUSTOMER ? (user as Customer).name : null,
-      user.userType === UserType.CUSTOMER ? (user as Customer).email : null,
-      user.userType === UserType.RESTAURANT_OWNER ? (user as restaurantOwner).restaurantName : null,
-      user.userType === UserType.RESTAURANT_OWNER ? (user as restaurantOwner).restaurantName : null
-    ]
+async create<T extends User>(user: T): Promise<T> {
+  const query = `
+    INSERT INTO users (
+      mobile_number, password, user_type, is_active,
+      name, email, restaurant_name, organization_number
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+  `;
+  const values = [
+    user.mobileNumber,
+    user.password,
+    user.userType,
+    user.isActive,
+    user.userType === UserType.CUSTOMER ? (user as Customer).name : null,
+    user.userType === UserType.CUSTOMER ? (user as Customer).email : null,
+    user.userType === UserType.RESTAURANT_OWNER ? (user as restaurantOwner).restaurantName : null,
+    user.userType === UserType.RESTAURANT_OWNER ? (user as restaurantOwner).organizationNumber : null
+  ];
 
-    const result = await this.db.query(query, values);
-    return this.mapRowToUser(result.rows[0])
+  const result = await this.db.query(query, values);
+  return this.mapRowToUser(result.rows[0]) as T;
+}
 
-  }
   async findByMobileNumber(mobileNumber: string): Promise<User | null> {
     const query = 'SELECT * FROM users WHERE mobile_number = $1';
     const result = await this.db.query(query, [mobileNumber])
@@ -49,86 +49,75 @@ export class UserRepository implements IUserRepository {
     return this.mapRowToUser(result.rows[0]);
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+  const query = 'SELECT * FROM users WHERE email = $1';
+  const result = await this.db.query(query, [email]);
 
-  async update(id: string, user: Partial<User>): Promise<User> {
-    // Array to hold SET clauses for SQL UPDATE statement
-    const fields: string[] = [];
+  if (result.rows.length === 0) {
+    return null;
+  }
 
-    // Array to hold parameter values for prepared statement
-    const values: any[] = [];
+  return this.mapRowToUser(result.rows[0]);
+}
 
-    // Counter to keep track of the parameter positions ($1, $2, etc.)
-    let paramCount = 1;
 
-    // If mobileNumber is provided, prepare to update it
-    if (user.mobileNumber) {
-      fields.push(`mobile_number = $${paramCount++}`);
-      values.push(user.mobileNumber);
+
+async update<T extends User>(id: string, user: Partial<T>): Promise<T> {
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  if (user.mobileNumber) {
+    fields.push(`mobile_number = $${paramCount++}`);
+    values.push(user.mobileNumber);
+  }
+
+  if (user.password) {
+    fields.push(`password = $${paramCount++}`);
+    values.push(user.password);
+  }
+
+  if (user.isActive !== undefined) {
+    fields.push(`is_active = $${paramCount++}`);
+    values.push(user.isActive);
+  }
+
+  if (user.userType === UserType.CUSTOMER) {
+    const customer = user as Partial<Customer>;
+    if (customer.name) {
+      fields.push(`name = $${paramCount++}`);
+      values.push(customer.name);
     }
-
-    // If password is provided, prepare to update it
-    if (user.password) {
-      fields.push(`password = $${paramCount++}`);
-      values.push(user.password);
+    if (customer.email) {
+      fields.push(`email = $${paramCount++}`);
+      values.push(customer.email);
     }
+  }
 
-    // If isActive is provided (including false), prepare to update it
-    if (user.isActive !== undefined) {
-      fields.push(`is_active = $${paramCount++}`);
-      values.push(user.isActive);
+  if (user.userType === UserType.RESTAURANT_OWNER) {
+    const owner = user as Partial<restaurantOwner>;
+    if (owner.restaurantName) {
+      fields.push(`restaurant_name = $${paramCount++}`);
+      values.push(owner.restaurantName);
     }
-
-    // Check if the user type is CUSTOMER to update customer-specific fields
-    if (user.userType === UserType.CUSTOMER) {
-      const customer = user as Partial<Customer>;
-
-      // If name is provided, prepare to update it
-      if (customer.name) {
-        fields.push(`name = $${paramCount++}`);
-        values.push(customer.name);
-      }
-
-      // If email is provided, prepare to update it
-      if (customer.email) {
-        fields.push(`email = $${paramCount++}`);
-        values.push(customer.email);
-      }
+    if (owner.organizationNumber) {
+      fields.push(`organization_number = $${paramCount++}`);
+      values.push(owner.organizationNumber);
     }
+  }
 
-    // Check if the user type is RESTAURANT_OWNER to update restaurant owner-specific fields
-    if (user.userType === UserType.RESTAURANT_OWNER) {
-      const owner = user as Partial<restaurantOwner>;
-
-      // If restaurantName is provided, prepare to update it
-      if (owner.restaurantName) {
-        fields.push(`restaurant_name = $${paramCount++}`);
-        values.push(owner.restaurantName);
-      }
-
-      // If organizationNumber is provided, prepare to update it
-      if (owner.organizationNumber) {
-        fields.push(`organization_number = $${paramCount++}`);
-        values.push(owner.organizationNumber);
-      }
-    }
-
-    // Add the ID parameter last for the WHERE clause
-    values.push(id);
-
-    // Construct the final SQL UPDATE query with dynamic SET clause
-    const query = `
+  values.push(id);
+  const query = `
     UPDATE users 
     SET ${fields.join(', ')}
     WHERE id = $${paramCount}
     RETURNING *
   `;
 
-    // Execute the query with all the collected parameter values
-    const result = await this.db.query(query, values);
+  const result = await this.db.query(query, values);
+  return this.mapRowToUser(result.rows[0]) as T;
+}
 
-    // Map the updated row data back to a User entity and return it
-    return this.mapRowToUser(result.rowss[0]);
-  }
 
   async delete(id: string): Promise<void> {
 

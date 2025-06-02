@@ -1,24 +1,34 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { AuthToken, JWTpayload } from '@/domain/entities/AuthToken';
 import { IAuthRepository } from '@/domain/repositories/IAuthRepository';
 
 export class AuthRepository implements IAuthRepository {
   private readonly jwtSecret: string;
-  private readonly jwtExpiration: string;
+  private readonly jwtExpiration: number;
+  private readonly refreshTokenExpiration: number;
 
   constructor() {
     this.jwtSecret = process.env.JWT_SECRET || 'your-super-secret-key';
-    this.jwtExpiration = process.env.JWT_EXPIRATION || '24h';
+    this.jwtExpiration = 24 * 60 * 60; // 24 hours in seconds
+    this.refreshTokenExpiration = 7 * 24 * 60 * 60; // 7 days in seconds
   }
 
   async generateToken(payload: JWTpayload): Promise<AuthToken> {
-    const accessToken = jwt.sign(payload, this.jwtSecret, {
+    const accessTokenOptions: SignOptions = {
       expiresIn: this.jwtExpiration,
-    });
+    };
+
+    const refreshTokenOptions: SignOptions = {
+      expiresIn: this.refreshTokenExpiration,
+    };
+
+    const accessToken = jwt.sign(payload, this.jwtSecret, accessTokenOptions);
+    const refreshToken = jwt.sign(payload, this.jwtSecret, refreshTokenOptions);
 
     return {
       accessToken,
-      expiresIn: 24 * 60 * 60, // 24 hours in seconds
+      refreshToken,
+      expiresIn: this.jwtExpiration,
     };
   }
 

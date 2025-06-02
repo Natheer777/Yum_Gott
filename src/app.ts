@@ -20,7 +20,7 @@ export class App {
   private setupMiddleware(): void {
     // Security middleware
     this.app.use(helmet());
-    
+
     // CORS configuration
     this.app.use(cors({
       origin: process.env.CORS_ORIGIN || '*',
@@ -51,8 +51,8 @@ export class App {
     const authRouter = new AuthRouter(this.diContainer.authController);
     this.app.use('/api/auth', authRouter.getRouter());
 
-    // 404 handler
-    this.app.use('*', (req: Request, res: Response) => {
+    // 404 handler - must be after all other routes
+    this.app.use((req: Request, res: Response) => {
       res.status(404).json({
         success: false,
         message: 'Route not found'
@@ -64,7 +64,7 @@ export class App {
     // Global error handler
     this.app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
       console.error('Global Error Handler:', error);
-      
+
       res.status(500).json({
         success: false,
         message: 'Internal server error',
