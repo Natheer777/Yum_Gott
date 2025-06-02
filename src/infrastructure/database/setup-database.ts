@@ -8,8 +8,15 @@ async function setupDatabase() {
   try {
     console.log('🔧 Setting up database...');
     
-    // Read and execute migration
-    const migrationPath = path.join(__dirname, '../src/infrastructure/database/migrations/001_create_users_table.sql');
+    // Fixed the migration path
+    const migrationPath = path.join(__dirname, 'migrations/001_create_users_table.sql');
+    
+    // Check if migration file exists
+    if (!fs.existsSync(migrationPath)) {
+      console.error(`❌ Migration file not found at: ${migrationPath}`);
+      process.exit(1);
+    }
+    
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
     
     await db.query(migrationSQL);
@@ -19,6 +26,17 @@ async function setupDatabase() {
     // Test the connection
     const result = await db.query('SELECT current_database(), current_user, version()');
     console.log('📊 Database info:', result.rows[0]);
+    
+    // Test if users table exists
+    const tableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `);
+    
+    console.log('👥 Users table exists:', tableCheck.rows[0].exists);
     
   } catch (error) {
     console.error('❌ Database setup failed:', error);

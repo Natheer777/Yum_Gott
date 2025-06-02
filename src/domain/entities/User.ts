@@ -10,12 +10,12 @@ export interface BaseUser {
     userType: UserType;
     isActive: boolean;
     createdAt?: Date;
-    updateAt?: Date
+    updateAt?: Date;
 };
 
 export interface Customer extends BaseUser {
     name: string;
-    email: String;
+    email: string;
     userType: UserType.CUSTOMER;
 }
 

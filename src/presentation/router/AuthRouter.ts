@@ -37,6 +37,9 @@ export class AuthRouter {
     );
   }
 
+
+  
+
   public getRouter(): Router {
     return this.router;
   }
