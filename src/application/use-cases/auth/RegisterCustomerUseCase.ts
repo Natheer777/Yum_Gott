@@ -1,23 +1,22 @@
 import { Customer, UserType } from '@/domain/entities/User';
 import { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { IPasswordHasher } from '@/application/interface/IPasswordHasher';
-import { IValidator } from '@/application/interface/IValidator';
+
 export interface RegisterCustomerRequest {
   name: string;
   email: string;
   mobileNumber: string;
   password: string;
 }
-//data inter by normal user
+
 export class RegisterCustomerUseCase {
   constructor(
     private userRepository: IUserRepository,
-    private passwordHasher: IPasswordHasher,
-    private validator: IValidator<RegisterCustomerRequest>
+    private passwordHasher: IPasswordHasher
   ) { }
 
   async execute(request: RegisterCustomerRequest): Promise<Customer> {
-    await this.validator.validate(request);
+    // Validation is now handled at the presentation layer
     await this.checkExistingUser(request);
 
     const hashedPassword = await this.passwordHasher.hash(request.password);

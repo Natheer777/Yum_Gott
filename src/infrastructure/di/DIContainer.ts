@@ -22,13 +22,13 @@ export class DIContainer {
   // Use Cases
   private _registerCustomerUseCase: RegisterCustomerUseCase;
   private _registerRestaurantOwnerUseCase: RegisterRestaurantOwnerUseCase;
-  private loginUseCase: LoginUseCase;
+  private _loginUseCase: LoginUseCase;
 
   // Controllers
-  private authController: AuthController;
+  private _authController: AuthController;
 
   // Middleware
-  private authMiddleware: AuthMiddleware;
+  private _authMiddleware: AuthMiddleware;
 
   private constructor() {
     this.initializeDependencies();
@@ -48,7 +48,7 @@ export class DIContainer {
     this._authRepository = new AuthRepository();
     this._passwordHasher = new PasswordHasher();
 
-    // Use Cases
+    // Use Cases (removed validator dependencies)
     this._registerCustomerUseCase = new RegisterCustomerUseCase(
       this._userRepository,
       this._passwordHasher

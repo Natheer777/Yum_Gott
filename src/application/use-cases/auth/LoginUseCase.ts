@@ -5,21 +5,32 @@ import { IUserRepository } from "@/domain/repositories/IUserRepository";
 import { IAuthRepository } from "@/domain/repositories/IAuthRepository";
 
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  mobileNumber?: string;
   password: string;
 }
+
 export interface LoginResponse {
   user: Omit<User, 'password'>;
   authToken: AuthToken;
 }
+
 export class LoginUseCase {
   constructor(
     private userRepository: IUserRepository,
     private authRepository: IAuthRepository,
     private passwordHasher: IPasswordHasher
   ) {}
+
   async execute(request: LoginRequest): Promise<LoginResponse> {
-const user = await this.userRepository.findByEmail(request.email);
+    // Find user by email or mobile number
+    let user: User | null = null;
+    
+    if (request.email) {
+      user = await this.userRepository.findByEmail(request.email);
+    } else if (request.mobileNumber) {
+      user = await this.userRepository.findByMobileNumber(request.mobileNumber);
+    }
 
     if (!user) {
       throw new Error("Invalid credentials");
@@ -28,23 +39,28 @@ const user = await this.userRepository.findByEmail(request.email);
     if (!user.isActive) {
       throw new Error("Account is deactivated");
     }
-    //check password
-    const isPasswordValid = await this.passwordHasher.compare(request.password, user.password)
+
+    // Check password
+    const isPasswordValid = await this.passwordHasher.compare(request.password, user.password);
     if (!isPasswordValid) {
       throw new Error('Invalid credentials');
     }
-    //generate Token
+
+    // Generate Token
     const jwtPayload: JWTpayload = {
       userId: user.id!,
       userType: user.userType,
       mobileNumber: user.mobileNumber
-    }
-    //remove password from object
+    };
+
     const authToken = await this.authRepository.generateToken(jwtPayload);
-    const { password, ...userWithoutPassword } = user
+    
+    // Remove password from response
+    const { password, ...userWithoutPassword } = user;
+    
     return {
       user: userWithoutPassword,
       authToken
-    }
+    };
   }
 }

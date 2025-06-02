@@ -1,17 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
-
-export interface ValidationSchema {
-  [key: string]: {
-    required?: boolean;
-    type?: 'string' | 'number' | 'email' | 'mobile';
-    minLength?: number;
-    maxLength?: number;
-  };
-}
+import { validationResult, ValidationError } from 'express-validator';
 
 export class ValidationMiddleware {
+  static handleValidationErrors() {
+    return (req: Request, res: Response, next: NextFunction): void => {
+      const errors = validationResult(req);
+      
+      if (!errors.isEmpty()) {
+        const formattedErrors = errors.array().map((error: ValidationError) => ({
+          field: error.type === 'field' ? error.path : 'general',
+          message: error.msg,
+          value: error.type === 'field' ? error.value : undefined
+        }));
+
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: formattedErrors
+        });
+        return;
+      }
+
+      next();
+    };
+  }
+
   static validate(schema: ValidationSchema) {
     return (req: Request, res: Response, next: NextFunction): void => {
+      console.warn('Legacy validation method is deprecated. Use express-validator instead.');
+      
       const errors: string[] = [];
       const data = req.body;
 
@@ -43,7 +60,11 @@ export class ValidationMiddleware {
       }
 
       if (errors.length > 0) {
-        res.status(400).json({ errors });
+        res.status(400).json({ 
+          success: false,
+          message: 'Validation failed',
+          errors 
+        });
         return;
       }
 
@@ -60,4 +81,13 @@ export class ValidationMiddleware {
     const mobileRegex = /^[0-9]{10,15}$/;
     return mobileRegex.test(mobile);
   }
+}
+
+export interface ValidationSchema {
+  [key: string]: {
+    required?: boolean;
+    type?: 'string' | 'number' | 'email' | 'mobile';
+    minLength?: number;
+    maxLength?: number;
+  };
 }

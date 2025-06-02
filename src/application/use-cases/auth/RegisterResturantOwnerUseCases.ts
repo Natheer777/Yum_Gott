@@ -1,7 +1,6 @@
 import { restaurantOwner, UserType } from '@/domain/entities/User';
 import { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { IPasswordHasher } from '@/application/interface/IPasswordHasher';
-import { IValidator } from '@/application/interface/IValidator';
 
 export interface RegisterRestaurantOwnerRequest {
   restaurantName: string;
@@ -13,12 +12,11 @@ export interface RegisterRestaurantOwnerRequest {
 export class RegisterRestaurantOwnerUseCase {
   constructor(
     private userRepository: IUserRepository,
-    private passwordHasher: IPasswordHasher,
-    private validator: IValidator<RegisterRestaurantOwnerRequest>
+    private passwordHasher: IPasswordHasher
   ) { }
 
   async execute(request: RegisterRestaurantOwnerRequest): Promise<restaurantOwner> {
-    await this.validator.validate(request);
+    // Validation is now handled at the presentation layer
     await this.checkExistingUser(request);
 
     const hashedPassword = await this.passwordHasher.hash(request.password);

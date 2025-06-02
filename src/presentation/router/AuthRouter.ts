@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../controller/AuthController';
+import { AuthValidators } from '../validators/AuthValidators';
 import { ValidationMiddleware } from '../middleware/ValidationMiddleware';
 
 export class AuthRouter {
@@ -14,34 +15,24 @@ export class AuthRouter {
     // Customer registration
     this.router.post(
       '/register/customer',
-      ValidationMiddleware.validate({
-        name: { required: true, type: 'string', minLength: 2, maxLength: 100 },
-        email: { required: true, type: 'email', maxLength: 255 },
-        mobileNumber: { required: true, type: 'mobile' },
-        password: { required: true, type: 'string', minLength: 6, maxLength: 100 }
-      }),
+      AuthValidators.registerCustomer(),
+      ValidationMiddleware.handleValidationErrors(),
       this.authController.registerCustomer
     );
 
     // Restaurant owner registration
     this.router.post(
       '/register/restaurant-owner',
-      ValidationMiddleware.validate({
-        restaurantName: { required: true, type: 'string', minLength: 2, maxLength: 255 },
-        organizationNumber: { required: true, type: 'string', minLength: 5, maxLength: 50 },
-        mobileNumber: { required: true, type: 'mobile' },
-        password: { required: true, type: 'string', minLength: 6, maxLength: 100 }
-      }),
+      AuthValidators.registerRestaurantOwner(),
+      ValidationMiddleware.handleValidationErrors(),
       this.authController.registerRestaurantOwner
     );
 
-    // Login
+    // Login - supports both email and mobile number
     this.router.post(
       '/login',
-      ValidationMiddleware.validate({
-        mobileNumber: { required: true, type: 'mobile' },
-        password: { required: true, type: 'string', minLength: 1 }
-      }),
+      AuthValidators.login(),
+      ValidationMiddleware.handleValidationErrors(),
       this.authController.login
     );
   }
